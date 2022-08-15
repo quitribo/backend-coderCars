@@ -1,6 +1,6 @@
 const { sendResponse, AppError } = require("../helpers/utils.js");
-const mongoose = require("mongoose");
-const Car = require("../models/Car");
+
+const Car = require("../models/Car.js");
 const carController = {};
 
 carController.createCar = async (req, res, next) => {
