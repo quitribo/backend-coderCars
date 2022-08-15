@@ -11,21 +11,24 @@ const mongoose = require("mongoose");
 require("dotenv").config();
 const cors = require("cors");
 
-const app = express();
+// Connect to MONGODB
+mongoose.connect(process.env.MONGO_URI, () => {
+  console.log("Connected to Database!");
+});
 
-app.use(cors());
+var indexRouter = require("./routes/index");
+
+var app = express();
+
 app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
-// Connect to MONGODB
-mongoose.connect(process.env.MONGO_URI, () => {
-  console.log("Connected to Database!");
-});
-
 app.use("/", indexRouter);
+// app.use("/users", usersRouter);
+// app.use("/tasks", tasksRouter);
 
 // catch 404 and forard to error handler
 app.use((req, res, next) => {
@@ -45,4 +48,5 @@ app.use((err, req, res, next) => {
     err.isOperational ? err.errorType : "Internal Server Error"
   );
 });
+
 module.exports = app;
