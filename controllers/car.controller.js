@@ -1,73 +1,59 @@
-const { sendResponse, AppError } = require("../helpers/utils.js");
-
-const Car = require("../models/Car.js");
+const mongoose = require('mongoose');
+const Car = require('../models/Car');
 const carController = {};
 
 carController.createCar = async (req, res, next) => {
-  const info = req.body;
+	try {
+		const { make, model, release_date, transmission_type, size, style, price } = req.body;
+		if (!make || !model || !release_date || !transmission_type || !size || !style || !price) {
+			throw new Error('Missing required info!');
+		}
+		const car = await Car.create({ make, model, release_date, transmission_type, size, style, price });
 
-  try {
-    if (!info) throw new AppError(402, "Bad Request", "Create Car Error");
-
-    const newCar = await Car.findOne(info);
-    if (newCar) throw new AppError(403, "Bad Request", "Car already exists");
-    //mongoose query
-    const created = await Car.create(info);
-    sendResponse(res, 200, true, { data: created }, null, "Create Car Success");
-  } catch (err) {
-    next(err);
-  }
+		return res.status(200).send({ message: 'Create Car Successfully!', car });
+	} catch (err) {
+		res.status(400).send({ message: err.message });
+	}
 };
 
 carController.getCars = async (req, res, next) => {
-  const filter = {};
-  try {
-    // YOUR CODE HERE
-    //mongoose query
-    const listOfFound = await Car.find(filter);
-    sendResponse(
-      res,
-      200,
-      true,
-      listOfFound,
-      null,
-      "Found list of CARS success"
-    );
-  } catch (err) {
-    next(err);
-  }
+	try {
+		const page = parseInt(req.query.page) || 1;
+		const limit = req.query.limit || 10;
+		const cars = await Car.find()
+			.sort({ createdAt: -1 })
+			.skip((page - 1) * limit)
+			.limit(limit);
+		const total = await Car.countDocuments({ isDeleted: false });
+		return res.status(200).json({ message: 'Get Car List Successfully!', cars, page, total: Math.ceil(total / limit) });
+	} catch (err) {
+		res.status(400).send({ message: err.message });
+	}
 };
 
 carController.editCar = async (req, res, next) => {
-  try {
-    const carFromDB = await Car.findById(req.params.id);
-    const carInfo = req.body;
+	try {
+		const { id } = req.params;
+		if (!mongoose.isValidObjectId(id)) throw new Error('Invalid ID');
 
-    // Check car if exists
-    if (!carFromDB) throw new AppError(404, "Not Found", "Car Not Found");
-
-    const options = { new: true };
-    const updated = await Car.findByIdAndUpdate(carFromDB, carInfo, options);
-    sendResponse(res, 200, true, updated, null, "Update car successfully");
-  } catch (err) {
-    next(err);
-  }
+		const car = await Car.findByIdAndUpdate(id, { ...req.body }, { new: true, runValidators: true });
+		if (!car) throw new Error('Car not found!');
+		return res.status(200).send({ message: 'Update Car Successfully!', car });
+	} catch (err) {
+		res.status(400).send({ message: err.message });
+	}
 };
 
 carController.deleteCar = async (req, res, next) => {
-  try {
-    //check
-    console.log(req.params);
-    const carFromDB = await Car.findById(req.params.id);
-    if (!carFromDB) throw new AppError(404, "Forbidden", "Car not found");
-
-    //delete
-    const options = { new: true };
-    await Car.findByIdAndUpdate(carFromDB, { isDeleted: true });
-    sendResponse(res, 200, true, null, null, "Delete user success");
-  } catch (err) {
-    next(err);
-  }
+	try {
+		const { id } = req.params;
+		if (!mongoose.isValidObjectId(id)) throw new Error('Invalid ID');
+		const car = await Car.findByIdAndUpdate(id, { isDeleted: true }, { new: true, runValidators: true });
+		if (!car) throw new Error('Car not found!');
+		return res.status(200).send({ message: 'Delete Car Successfully!', car });
+	} catch (err) {
+		res.status(400).send({ message: err.message });
+	}
 };
 
 module.exports = carController;
